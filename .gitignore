@@ -31,20 +31,16 @@ wheels/
 *.pt
 checkpoints/
 
-# Results
-# Track results directory and its contents
-# results/  # Commented out to track results
-# Allow results directory files
-!results/
-!results/**/*.png
-!results/**/*.json
-# Ignore PNG files elsewhere (but not in results/)
-*.png
-*.jpg
-*.jpeg
+# Results - track results directory
+# results/ is not ignored, so results will be tracked
 
-# Data (uncomment if you don't want to track data)
-# data/
+# Data - ignore entire data folder and all its contents
+data/
+data/**/*.png
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.JPG
+data/**/*.JPEG
 
 # IDE
 .vscode/
