@@ -32,7 +32,13 @@ class FireDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
-        image = Image.open(image_path).convert("RGB")
+        try:
+            image = Image.open(image_path).convert("RGB")
+        except Exception as e:
+            # Skip corrupted images - return a black image as fallback
+            print(f"Warning: Could not load image {image_path}: {e}")
+            image = Image.new("RGB", (224, 224), color=(0, 0, 0))
+        
         label = self.labels[idx]
 
         if self.transform:
@@ -74,7 +80,10 @@ def load_image_paths(data_dir: str, class_name: str) -> List[str]:
 
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
     image_paths = [
-        str(p) for p in class_dir.iterdir() if p.suffix.lower() in image_extensions
+        str(p) for p in class_dir.iterdir() 
+        if p.is_file() 
+        and not p.name.startswith('.')  # Skip hidden files (macOS metadata)
+        and p.suffix.lower() in image_extensions
     ]
     return sorted(image_paths)
 
@@ -103,19 +112,23 @@ def prepare_dataset(
     non_fire_dir = Path(train_dir) / "non_fire"
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
     
-    # Loads and labels all fire images
+    # Loads and labels all fire images - exclude hidden files (macOS metadata)
     fire_paths = [
         str(p)
         for p in fire_dir.iterdir()
-        if p.is_file() and p.suffix.lower() in image_extensions
+        if p.is_file() 
+        and not p.name.startswith('.')  # Skip hidden files
+        and p.suffix.lower() in image_extensions
     ]
     fire_labels = [1] * len(fire_paths)
     
-    # Loads and labels all non-fire images
+    # Loads and labels all non-fire images - exclude hidden files
     all_non_fire_paths = [
         str(p)
         for p in non_fire_dir.iterdir()
-        if p.is_file() and p.suffix.lower() in image_extensions
+        if p.is_file() 
+        and not p.name.startswith('.')  # Skip hidden files
+        and p.suffix.lower() in image_extensions
     ]
     all_non_fire_labels = [0] * len(all_non_fire_paths)
     
@@ -128,7 +141,9 @@ def prepare_dataset(
             all_bcst_paths = [
                 str(p)
                 for p in bcst_dir_path.iterdir()
-                if p.is_file() and p.suffix.lower() in image_extensions
+                if p.is_file() 
+                and not p.name.startswith('.')  # Skip hidden files
+                and p.suffix.lower() in image_extensions
             ]
             # Take first num_bcst BCST images
             bcst_paths = sorted(all_bcst_paths)[:num_firelike]
