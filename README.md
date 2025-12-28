@@ -48,7 +48,7 @@ pip install -r requirements.txt
 Run the full experiment with all three models:
 
 ```bash
-python experiment.py --data-root data --epochs 20 --batch-size 32 --lr 0.001
+python experiment_one.py --data-root data --epochs 20 --lr 0.001 --patience 5
 ```
 
 ### Arguments
