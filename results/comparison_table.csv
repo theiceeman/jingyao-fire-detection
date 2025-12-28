@@ -1,0 +1,7 @@
+Model,Scenario,Fire Detection Rate,Error Warning Rate,Accuracy,TP,TN,FP,FN
+EfficientNet,Baseline,0.9608,0.0571,0.9504,49,66,4,2
+EfficientNet,200_BCST,0.9608,0.1200,0.8937,49,220,30,2
+MobileNet,Baseline,0.9804,0.0714,0.9504,50,65,5,1
+MobileNet,200_BCST,0.9804,0.2000,0.8306,50,200,50,1
+SVM,Baseline,0.9412,0.0429,0.9504,48,67,3,3
+SVM,200_BCST,0.9412,0.1480,0.8671,48,213,37,3

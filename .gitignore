@@ -32,7 +32,13 @@ wheels/
 checkpoints/
 
 # Results
-results/
+# Track results directory and its contents
+# results/  # Commented out to track results
+# Allow results directory files
+!results/
+!results/**/*.png
+!results/**/*.json
+# Ignore PNG files elsewhere (but not in results/)
 *.png
 *.jpg
 *.jpeg

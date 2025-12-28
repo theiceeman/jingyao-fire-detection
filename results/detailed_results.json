@@ -1,0 +1,80 @@
+{
+  "EfficientNet": {
+    "Baseline": {
+      "fire_detection_rate": 0.9607843137254902,
+      "error_warning_rate": 0.05714285714285714,
+      "accuracy": 0.9504132231404959,
+      "precision": 0.9245283018867925,
+      "recall": 0.9607843137254902,
+      "f1_score": 0.9423076923076923,
+      "tp": 49,
+      "tn": 66,
+      "fp": 4,
+      "fn": 2
+    },
+    "200_BCST": {
+      "fire_detection_rate": 0.9607843137254902,
+      "error_warning_rate": 0.12,
+      "accuracy": 0.893687707641196,
+      "precision": 0.620253164556962,
+      "recall": 0.9607843137254902,
+      "f1_score": 0.7538461538461539,
+      "tp": 49,
+      "tn": 220,
+      "fp": 30,
+      "fn": 2
+    }
+  },
+  "MobileNet": {
+    "Baseline": {
+      "fire_detection_rate": 0.9803921568627451,
+      "error_warning_rate": 0.07142857142857142,
+      "accuracy": 0.9504132231404959,
+      "precision": 0.9090909090909091,
+      "recall": 0.9803921568627451,
+      "f1_score": 0.9433962264150944,
+      "tp": 50,
+      "tn": 65,
+      "fp": 5,
+      "fn": 1
+    },
+    "200_BCST": {
+      "fire_detection_rate": 0.9803921568627451,
+      "error_warning_rate": 0.2,
+      "accuracy": 0.8305647840531561,
+      "precision": 0.5,
+      "recall": 0.9803921568627451,
+      "f1_score": 0.662251655629139,
+      "tp": 50,
+      "tn": 200,
+      "fp": 50,
+      "fn": 1
+    }
+  },
+  "SVM": {
+    "Baseline": {
+      "fire_detection_rate": 0.9411764705882353,
+      "error_warning_rate": 0.04285714285714286,
+      "accuracy": 0.9504132231404959,
+      "precision": 0.9411764705882353,
+      "recall": 0.9411764705882353,
+      "f1_score": 0.9411764705882353,
+      "tp": 48,
+      "tn": 67,
+      "fp": 3,
+      "fn": 3
+    },
+    "200_BCST": {
+      "fire_detection_rate": 0.9411764705882353,
+      "error_warning_rate": 0.148,
+      "accuracy": 0.867109634551495,
+      "precision": 0.5647058823529412,
+      "recall": 0.9411764705882353,
+      "f1_score": 0.7058823529411765,
+      "tp": 48,
+      "tn": 213,
+      "fp": 37,
+      "fn": 3
+    }
+  }
+}
