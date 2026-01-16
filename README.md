@@ -50,6 +50,9 @@ Run the full experiment with all three models:
 ```bash
 python experiment_one.py --data-root data --epochs 20 --lr 0.001 --patience 5
 ```
+```bash
+python experiment_color_space.py --data-root data --epochs 20 --lr 0.001 --patience 5
+```
 
 ### Arguments
 - `--data-root`: Root directory containing data folders (default: `data`)

@@ -11,11 +11,22 @@ from torchvision import transforms
 from PIL import Image
 import numpy as np
 from sklearn.model_selection import train_test_split
+from skimage import color
+
+
+class ColorSpaceConverter:
+    """Callable class for color space conversion (pickle-friendly)."""
+
+    def __init__(self, color_space="RGB"):
+        self.color_space = color_space
+
+    def __call__(self, image):
+        return convert_color_space(image, self.color_space)
 
 
 class FireDataset(Dataset):
     """Custom dataset for fire/non-fire images."""
-    
+
     def __init__(self, image_paths: List[str], labels: List[int], transform=None):
         """
         Args:
@@ -26,10 +37,10 @@ class FireDataset(Dataset):
         self.image_paths = image_paths
         self.labels = labels
         self.transform = transform
-    
+
     def __len__(self):
         return len(self.image_paths)
-    
+
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
         try:
@@ -38,35 +49,71 @@ class FireDataset(Dataset):
             # Skip corrupted images - return a black image as fallback
             print(f"Warning: Could not load image {image_path}: {e}")
             image = Image.new("RGB", (224, 224), color=(0, 0, 0))
-        
+
         label = self.labels[idx]
-        
+
         if self.transform:
             image = self.transform(image)
-        
+
         return image, label
 
 
-def get_train_transforms():
-    """Get training transforms with augmentation."""
+def convert_color_space(image, color_space="RGB"):
+    """
+    Convert PIL Image to different color space.
+
+    Args:
+        image: PIL Image in RGB
+        color_space: 'RGB', 'HSV', 'LAB', 'YUV', 'YCbCr', 'GRAY'
+
+    Returns:
+        PIL Image in specified color space (or converted back to RGB for display)
+    """
+    if color_space == "RGB":
+        return image
+    elif color_space == "HSV":
+        return image.convert("HSV")
+    elif color_space == "LAB":
+        # Convert RGB to LAB using skimage
+
+        img_array = np.array(image)
+        lab_array = color.rgb2lab(img_array)
+        # Normalize to 0-255 range for display
+        lab_array = (lab_array + [0, 128, 128]) / [100, 255, 255] * 255
+        lab_array = np.clip(lab_array, 0, 255).astype(np.uint8)
+        return Image.fromarray(lab_array)
+    elif color_space == "YCbCr":
+        return image.convert("YCbCr")
+    elif color_space == "GRAY":
+        return image.convert("L").convert(
+            "RGB"
+        )  # Convert to grayscale then back to RGB for 3 channels
+    else:
+        return image  # Default to RGB
+
+
+def get_train_transforms(color_space="RGB"):
+    """This applies a sequence of transformations or preprocessing steps to training images."""
     return transforms.Compose(
         [
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomRotation(degrees=15),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
-        transforms.ToTensor(),
+            ColorSpaceConverter(color_space),
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(degrees=15),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
 
 
-def get_val_transforms():
+def get_val_transforms(color_space="RGB"):
     """Get validation/test transforms (no augmentation)."""
     return transforms.Compose(
         [
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
+            ColorSpaceConverter(color_space),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
@@ -77,12 +124,13 @@ def load_image_paths(data_dir: str, class_name: str) -> List[str]:
     class_dir = Path(data_dir) / class_name
     if not class_dir.exists():
         return []
-    
+
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
     image_paths = [
-        str(p) for p in class_dir.iterdir() 
-        if p.is_file() 
-        and not p.name.startswith('.')  # Skip hidden files (macOS metadata)
+        str(p)
+        for p in class_dir.iterdir()
+        if p.is_file()
+        and not p.name.startswith(".")  # Skip hidden files (macOS metadata)
         and p.suffix.lower() in image_extensions
     ]
     return sorted(image_paths)
@@ -95,15 +143,15 @@ def prepare_dataset(
 ):
     """
     Prepare training dataset with optional Fire-like images.
-    
+
     Loads all images from train/fire and train/non_fire folders.
     If num_bcst > 0, adjusts non_fire count to keep total non_fire at 600.
-    
+
     Args:
         train_dir: Directory containing fire and non-fire images
         bcst_dir: Directory containing Fire-like images (optional)
         num_bcst: Number of Fire-like images to add (0, 50, 100, 150...)
-    
+
     Returns:
         (fire_paths, fire_labels, non_fire_paths, non_fire_labels, bcst_paths, bcst_labels)
         Always returns separately for proper stratification
@@ -111,27 +159,27 @@ def prepare_dataset(
     fire_dir = Path(train_dir) / "fire"
     non_fire_dir = Path(train_dir) / "non_fire"
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
-    
+
     # Loads and labels all fire images - exclude hidden files (macOS metadata)
     fire_paths = [
         str(p)
         for p in fire_dir.iterdir()
-        if p.is_file() 
-        and not p.name.startswith('.')  # Skip hidden files
+        if p.is_file()
+        and not p.name.startswith(".")  # Skip hidden files
         and p.suffix.lower() in image_extensions
     ]
     fire_labels = [1] * len(fire_paths)
-    
+
     # Loads and labels all non-fire images - exclude hidden files
     all_non_fire_paths = [
         str(p)
         for p in non_fire_dir.iterdir()
-        if p.is_file() 
-        and not p.name.startswith('.')  # Skip hidden files
+        if p.is_file()
+        and not p.name.startswith(".")  # Skip hidden files
         and p.suffix.lower() in image_extensions
     ]
     all_non_fire_labels = [0] * len(all_non_fire_paths)
-    
+
     # Load BCST images if specified
     bcst_paths = []
     bcst_labels = []
@@ -141,14 +189,14 @@ def prepare_dataset(
             all_bcst_paths = [
                 str(p)
                 for p in bcst_dir_path.iterdir()
-                if p.is_file() 
-                and not p.name.startswith('.')  # Skip hidden files
+                if p.is_file()
+                and not p.name.startswith(".")  # Skip hidden files
                 and p.suffix.lower() in image_extensions
-                ]
+            ]
             # Take first num_bcst BCST images
             bcst_paths = sorted(all_bcst_paths)[:num_firelike]
             bcst_labels = [0] * len(bcst_paths)
-    
+
     # Adjust non_fire count: if num_bcst > 0, take (600 - num_bcst) non_fire images
     # This keeps total non_fire at 600 (non_fire + firelike = 600)
     if num_firelike > 0:
@@ -159,7 +207,7 @@ def prepare_dataset(
         # If no firelike, return all non_fire images
         non_fire_paths = sorted(all_non_fire_paths)
         non_fire_labels = all_non_fire_labels
-    
+
     return (
         fire_paths,
         fire_labels,
@@ -185,27 +233,27 @@ def extract_features_for_svm(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Extract features from images using a pre-trained model for SVM.
-    
+
     Args:
         model: Pre-trained PyTorch model (feature extractor)
         dataloader: DataLoader with images
         device: Device to run inference on
-    
+
     Returns:
         Tuple of (features, labels) as numpy arrays
     """
     model.eval()
     features = []
     labels = []
-    
+
     with torch.no_grad():
         for images, batch_labels in dataloader:
             images = images.to(device)
             batch_features = model(images)
             features.append(batch_features.cpu().numpy())
             labels.append(batch_labels.numpy())
-    
+
     features = np.vstack(features)
     labels = np.hstack(labels)
-    
+
     return features, labels
