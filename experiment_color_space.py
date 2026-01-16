@@ -17,7 +17,10 @@ from utils.data_loader import (
     get_val_transforms,
 )
 from train import train_pytorch_model, train_svm_model
-from evaluate import evaluate_pytorch_model_on_test_sets, evaluate_svm_model_on_test_sets
+from evaluate import (
+    evaluate_pytorch_model_for_color_space,
+    evaluate_svm_model_for_color_space,
+)
 from sklearn.model_selection import train_test_split
 
 
@@ -72,6 +75,14 @@ def run_experiment_color_space(
         print("\n" + "=" * 80)
         print(f"COLOR SPACE: {color_space}")
         print("=" * 80)
+
+        # Initialize color space entries in results dict
+        if color_space not in results["EfficientNet"]:
+            results["EfficientNet"][color_space] = {}
+        if color_space not in results["MobileNet"]:
+            results["MobileNet"][color_space] = {}
+        if color_space not in results["SVM"]:
+            results["SVM"][color_space] = {}
 
         # Create test data loader with current color space
         val_transform = get_val_transforms(color_space=color_space)
@@ -173,16 +184,14 @@ def run_experiment_color_space(
             )
 
             # Evaluate on test set
-            # Store results with color space key
-            if color_space not in results["EfficientNet"]:
-                results["EfficientNet"][color_space] = {}
-            evaluate_pytorch_model_on_test_sets(
+            evaluate_pytorch_model_for_color_space(
                 efficientnet,
                 "EfficientNet",
                 test_data_loader,
                 device,
                 results["EfficientNet"][color_space],
                 firelike_amount,
+                color_space,
             )
 
             # ========== MobileNet ==========
@@ -200,15 +209,14 @@ def run_experiment_color_space(
             )
 
             # Evaluate on test set
-            if color_space not in results["MobileNet"]:
-                results["MobileNet"][color_space] = {}
-            evaluate_pytorch_model_on_test_sets(
+            evaluate_pytorch_model_for_color_space(
                 mobilenet,
                 "MobileNet",
                 test_data_loader,
                 device,
                 results["MobileNet"][color_space],
                 firelike_amount,
+                color_space,
             )
 
             # ========== SVM ==========
@@ -217,13 +225,12 @@ def run_experiment_color_space(
             train_svm_model(svm_model, train_loader)
 
             # Evaluate on test set
-            if color_space not in results["SVM"]:
-                results["SVM"][color_space] = {}
-            evaluate_svm_model_on_test_sets(
+            evaluate_svm_model_for_color_space(
                 svm_model,
                 test_data_loader,
                 results["SVM"][color_space],
                 firelike_amount,
+                color_space,
             )
 
     # ========== SAVE RESULTS ==========

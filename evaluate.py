@@ -163,3 +163,101 @@ def evaluate_svm_model_on_test_sets(
     print_metrics(metrics_test)
 
     return metrics_test
+
+
+def evaluate_pytorch_model_for_color_space(
+    model: torch.nn.Module,
+    model_name: str,
+    test_data_loader: DataLoader,
+    device: torch.device,
+    results_dict: dict,
+    firelike_amount: int = None,
+    color_space: str = None,
+) -> dict:
+    """
+    Evaluate a PyTorch model for color space experiment.
+    Handles evaluation, plotting, printing, and storing results.
+    
+    Note: results_dict is already at model+color_space level (e.g., results["EfficientNet"]["RGB"])
+
+    Args:
+        model: Trained PyTorch model
+        model_name: Name of the model (e.g., "EfficientNet", "MobileNet")
+        test_data_loader: DataLoader for test set
+        device: Device to run evaluation on
+        results_dict: Dictionary to store results in (already at model+color_space level)
+        firelike_amount: Optional BCST amount used in training (for result storage)
+        color_space: Optional color space name (for file naming)
+
+    Returns:
+        Test metrics dictionary
+    """
+    print(f"\nEvaluating {model_name} on test set...")
+    metrics_test = evaluate_pytorch_model(model, test_data_loader, device)
+
+    # Store results by BCST amount
+    # results_dict is already at model+color_space level
+    if str(firelike_amount) not in results_dict:
+        results_dict[str(firelike_amount)] = {}
+
+    results_dict[str(firelike_amount)]["test"] = metrics_test
+
+    # Create save path with color space info
+    color_suffix = f"_{color_space.lower()}" if color_space else ""
+    save_suffix = f"{color_suffix}_firelike{firelike_amount}" if firelike_amount is not None else color_suffix
+    plot_confusion_matrix(
+        metrics_test["confusion_matrix"],
+        model_name,
+        save_path=f"results/{model_name.lower()}_baseline{save_suffix}_confusion_matrix.png",
+        title=f"{model_name} - Test Set ({color_space}, Firelike Amount {firelike_amount})",
+    )
+    print_metrics(metrics_test)
+
+    return metrics_test
+
+
+def evaluate_svm_model_for_color_space(
+    svm_model,
+    test_data_loader: DataLoader,
+    results_dict: dict,
+    firelike_amount: int = None,
+    color_space: str = None,
+) -> dict:
+    """
+    Evaluate an SVM model for color space experiment.
+    Handles evaluation, plotting, printing, and storing results.
+    
+    Note: results_dict is already at model+color_space level (e.g., results["SVM"]["RGB"])
+
+    Args:
+        svm_model: Trained SVM model
+        test_data_loader: DataLoader for test set
+        results_dict: Dictionary to store results in (already at model+color_space level)
+        firelike_amount: Optional BCST amount used in training (for result storage)
+        color_space: Optional color space name (for file naming)
+
+    Returns:
+        Test metrics dictionary
+    """
+    print(f"\nEvaluating SVM on test set...")
+    metrics_test = evaluate_svm_model(svm_model, test_data_loader)
+
+    # Store results by BCST amount
+    # results_dict is already at model+color_space level
+    if str(firelike_amount) not in results_dict:
+        results_dict[str(firelike_amount)] = {}
+
+    results_dict[str(firelike_amount)]["test"] = metrics_test
+
+    # Create save path with color space info
+    color_suffix = f"_{color_space.lower()}" if color_space else ""
+    save_suffix = f"{color_suffix}_firelike{firelike_amount}" if firelike_amount is not None else color_suffix
+    plot_confusion_matrix(
+        metrics_test["confusion_matrix"],
+        "SVM",
+        save_path=f"results/svm_baseline{save_suffix}_confusion_matrix.png",
+        title=f"SVM - Test Set ({color_space}, Firelike Amount {firelike_amount})",
+    )
+    print_metrics(metrics_test)
+
+    return metrics_test
