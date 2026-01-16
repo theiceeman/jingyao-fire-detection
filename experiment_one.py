@@ -7,6 +7,8 @@ from pathlib import Path
 import json
 
 from models.efficientnet import create_efficientnet_model
+from models.mobilenet import create_mobilenet_model
+from models.svm_model import create_svm_model
 from utils.data_loader import (
     prepare_dataset,
     load_image_paths,
@@ -14,8 +16,8 @@ from utils.data_loader import (
     get_train_transforms,
     get_val_transforms,
 )
-from train import train_pytorch_model
-from evaluate import evaluate_pytorch_model_on_test_sets
+from train import train_pytorch_model, train_svm_model
+from evaluate import evaluate_pytorch_model_on_test_sets, evaluate_svm_model_on_test_sets
 from sklearn.model_selection import train_test_split
 
 
@@ -72,7 +74,7 @@ def run_experiment_one(
 
     # ========== EXPERIMENT LOOP ==========
     firelike_amounts = [0, 50, 100, 150]
-    results = {"EfficientNet": {}}
+    results = {"EfficientNet": {}, "MobileNet": {}, "SVM": {}}
 
     for firelike_amount in firelike_amounts:
         print("\n" + "=" * 80)
@@ -173,42 +175,42 @@ def run_experiment_one(
             firelike_amount,
         )
 
-        # # ========== MobileNet ==========
-    # print("\nTraining MobileNet...")
-    # mobilenet = create_mobilenet_model(num_classes=2, model_name="mobilenet_v2")
-    # mobilenet = train_pytorch_model(
-    #     mobilenet,
-    #     train_loader,
-    #     val_loader,
-    #     num_epochs=num_epochs,
-    #     learning_rate=learning_rate,
-    #     device=device,
-    #     save_dir="checkpoints/mobilenet",
-    #     patience=patience,
-    # )
+        # ========== MobileNet ==========
+        print("\nTraining MobileNet...")
+        mobilenet = create_mobilenet_model(num_classes=2, model_name="mobilenet_v2")
+        mobilenet = train_pytorch_model(
+            mobilenet,
+            train_loader,
+            val_loader,
+            num_epochs=num_epochs,
+            learning_rate=learning_rate,
+            device=device,
+            save_dir=f"checkpoints/mobilenet/firelike_{firelike_amount}",
+            patience=patience,
+        )
 
-    # # Evaluate on both test sets
-    # evaluate_pytorch_model_on_test_sets(
-    #     mobilenet,
-    #     "MobileNet",
-    #     test_loader_baseline,
-    #     test_loader_bcst,
-    #     device,
-    #     results,
-    # )
+        # Evaluate on both test sets
+        evaluate_pytorch_model_on_test_sets(
+            mobilenet,
+            "MobileNet",
+            test_data_loader,
+            device,
+            results,
+            firelike_amount,
+        )
 
-    # # ========== SVM ==========
-    # print("\nTraining SVM...")
-    # svm_model = create_svm_model(kernel="rbf", C=1.0, gamma="scale")
-    # train_svm_model(svm_model, train_loader)
+        # ========== SVM ==========
+        print("\nTraining SVM...")
+        svm_model = create_svm_model(kernel="rbf", C=1.0, gamma="scale")
+        train_svm_model(svm_model, train_loader)
 
-    # # Evaluate on both test sets
-    # evaluate_svm_model_on_test_sets(
-    #     svm_model,
-    #     test_loader_baseline,
-    #     test_loader_bcst,
-    #     results,
-    # )
+        # Evaluate on test set
+        evaluate_svm_model_on_test_sets(
+            svm_model,
+            test_data_loader,
+            results,
+            firelike_amount,
+        )
 
     # ========== SAVE RESULTS ==========
     print("\n" + "=" * 80)

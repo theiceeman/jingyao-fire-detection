@@ -127,47 +127,39 @@ def evaluate_pytorch_model_on_test_sets(
 
 def evaluate_svm_model_on_test_sets(
     svm_model,
-    test_loader_baseline: DataLoader,
-    test_loader_bcst: DataLoader,
+    test_data_loader: DataLoader,
     results_dict: dict,
-) -> tuple:
+    firelike_amount: int = None,
+) -> dict:
     """
-    Evaluate an SVM model on both baseline and BCST test sets.
+    Evaluate an SVM model on test set.
     Handles evaluation, plotting, printing, and storing results.
 
     Args:
         svm_model: Trained SVM model
-        test_loader_baseline: DataLoader for baseline test set
-        test_loader_bcst: DataLoader for BCST test set
+        test_data_loader: DataLoader for test set
         results_dict: Dictionary to store results in
+        firelike_amount: Optional BCST amount used in training (for result storage)
 
     Returns:
-        Tuple of (baseline_metrics, bcst_metrics)
+        Test metrics dictionary
     """
-    # Evaluate on baseline test set
-    print("\nEvaluating SVM on baseline test set...")
-    metrics_baseline = evaluate_svm_model(svm_model, test_loader_baseline)
-    results_dict["SVM"]["Baseline"] = metrics_baseline
+    print(f"\nEvaluating SVM on test set...")
+    metrics_test = evaluate_svm_model(svm_model, test_data_loader)
 
+    # Store results by BCST amount if provided
+    if str(firelike_amount) not in results_dict["SVM"]:
+        results_dict["SVM"][str(firelike_amount)] = {}
+
+    results_dict["SVM"][str(firelike_amount)]["test"] = metrics_test
+
+    save_suffix = f"_firelike{firelike_amount}" if firelike_amount is not None else ""
     plot_confusion_matrix(
-        metrics_baseline["confusion_matrix"],
+        metrics_test["confusion_matrix"],
         "SVM",
-        save_path="results/svm_baseline_confusion_matrix.png",
-        title="SVM - Baseline Test Set",
+        save_path=f"results/svm_baseline{save_suffix}_confusion_matrix.png",
+        title=f"SVM - Test Set (Firelike Amount {firelike_amount})",
     )
-    print_metrics(metrics_baseline)
+    print_metrics(metrics_test)
 
-    # Evaluate on BCST test set
-    print("\nEvaluating SVM on test set with 200 BCST...")
-    metrics_bcst = evaluate_svm_model(svm_model, test_loader_bcst)
-    results_dict["SVM"]["200_BCST"] = metrics_bcst
-
-    plot_confusion_matrix(
-        metrics_bcst["confusion_matrix"],
-        "SVM",
-        save_path="results/svm_200bcst_confusion_matrix.png",
-        title="SVM - Test Set with 200 BCST",
-    )
-    print_metrics(metrics_bcst)
-
-    return metrics_baseline, metrics_bcst
+    return metrics_test

@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 
 class FireDataset(Dataset):
     """Custom dataset for fire/non-fire images."""
-
+    
     def __init__(self, image_paths: List[str], labels: List[int], transform=None):
         """
         Args:
@@ -26,10 +26,10 @@ class FireDataset(Dataset):
         self.image_paths = image_paths
         self.labels = labels
         self.transform = transform
-
+    
     def __len__(self):
         return len(self.image_paths)
-
+    
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
         try:
@@ -40,10 +40,10 @@ class FireDataset(Dataset):
             image = Image.new("RGB", (224, 224), color=(0, 0, 0))
         
         label = self.labels[idx]
-
+        
         if self.transform:
             image = self.transform(image)
-
+        
         return image, label
 
 
@@ -51,11 +51,11 @@ def get_train_transforms():
     """Get training transforms with augmentation."""
     return transforms.Compose(
         [
-            transforms.Resize((224, 224)),
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomRotation(degrees=15),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
-            transforms.ToTensor(),
+        transforms.Resize((224, 224)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(degrees=15),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2),
+        transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
@@ -65,8 +65,8 @@ def get_val_transforms():
     """Get validation/test transforms (no augmentation)."""
     return transforms.Compose(
         [
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
@@ -77,7 +77,7 @@ def load_image_paths(data_dir: str, class_name: str) -> List[str]:
     class_dir = Path(data_dir) / class_name
     if not class_dir.exists():
         return []
-
+    
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif"}
     image_paths = [
         str(p) for p in class_dir.iterdir() 
@@ -144,7 +144,7 @@ def prepare_dataset(
                 if p.is_file() 
                 and not p.name.startswith('.')  # Skip hidden files
                 and p.suffix.lower() in image_extensions
-            ]
+                ]
             # Take first num_bcst BCST images
             bcst_paths = sorted(all_bcst_paths)[:num_firelike]
             bcst_labels = [0] * len(bcst_paths)
@@ -185,27 +185,27 @@ def extract_features_for_svm(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Extract features from images using a pre-trained model for SVM.
-
+    
     Args:
         model: Pre-trained PyTorch model (feature extractor)
         dataloader: DataLoader with images
         device: Device to run inference on
-
+    
     Returns:
         Tuple of (features, labels) as numpy arrays
     """
     model.eval()
     features = []
     labels = []
-
+    
     with torch.no_grad():
         for images, batch_labels in dataloader:
             images = images.to(device)
             batch_features = model(images)
             features.append(batch_features.cpu().numpy())
             labels.append(batch_labels.numpy())
-
+    
     features = np.vstack(features)
     labels = np.hstack(labels)
-
+    
     return features, labels
