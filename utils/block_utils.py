@@ -7,6 +7,9 @@ from PIL import Image
 from pathlib import Path
 from typing import List, Tuple
 import random
+from multiprocessing import Pool, cpu_count
+from functools import partial
+from tqdm import tqdm
 
 
 def extract_blocks_from_image(
@@ -43,15 +46,37 @@ def extract_blocks_from_image(
     return blocks, positions
 
 
+def _process_single_image(args):
+    """
+    Helper function for parallel processing.
+    Extracts blocks from a single image.
+    
+    Args:
+        args: Tuple of (image_path, label, block_size)
+    
+    Returns:
+        Tuple of (blocks, label, success)
+    """
+    image_path, label, block_size = args
+    try:
+        image = Image.open(image_path).convert("RGB")
+        blocks, _ = extract_blocks_from_image(image, block_size)
+        return (blocks, label, True)
+    except Exception as e:
+        return ([], label, False)
+
+
 def extract_blocks_from_dataset(
     image_paths: List[str],
     labels: List[int],
     block_size: int,
     max_samples_per_class: int = None,
     random_seed: int = 42,
+    num_workers: int = None,
+    show_progress: bool = True,
 ) -> Tuple[List[Image.Image], List[int]]:
     """
-    Extract blocks from multiple images and sample to fixed number.
+    Extract blocks from multiple images with parallel processing and early sampling.
 
     Args:
         image_paths: List of paths to full images
@@ -59,6 +84,8 @@ def extract_blocks_from_dataset(
         block_size: Size of blocks to extract
         max_samples_per_class: Maximum blocks per class (None = use all)
         random_seed: Random seed for sampling
+        num_workers: Number of parallel workers (None = auto-detect, max 4)
+        show_progress: Show progress bar
 
     Returns:
         block_images: List of PIL Images (blocks)
@@ -67,17 +94,49 @@ def extract_blocks_from_dataset(
     random.seed(random_seed)
     np.random.seed(random_seed)
 
-    all_blocks = {0: [], 1: []}  # Separate by class
+    if num_workers is None:
+        num_workers = min(cpu_count(), 4)  # Limit to 4 to avoid memory issues
 
-    # Extract blocks from all images
-    for image_path, label in zip(image_paths, labels):
-        try:
-            image = Image.open(image_path).convert("RGB")
-            blocks, _ = extract_blocks_from_image(image, block_size)
-            all_blocks[label].extend(blocks)
-        except Exception as e:
-            print(f"Warning: Could not load {image_path}: {e}")
-            continue
+    # Prepare arguments for parallel processing
+    process_args = [(path, label, block_size) for path, label in zip(image_paths, labels)]
+
+    # Extract blocks in parallel with progress bar
+    all_blocks = {0: [], 1: []}
+    failed_images = 0
+
+    if num_workers > 1:
+        # Parallel processing
+        with Pool(num_workers) as pool:
+            if show_progress:
+                results = list(tqdm(
+                    pool.imap(_process_single_image, process_args),
+                    total=len(process_args),
+                    desc=f"Extracting {block_size}x{block_size} blocks"
+                ))
+            else:
+                results = pool.map(_process_single_image, process_args)
+        
+        for blocks, label, success in results:
+            if success:
+                all_blocks[label].extend(blocks)
+            else:
+                failed_images += 1
+    else:
+        # Sequential processing (fallback)
+        if show_progress:
+            iterator = tqdm(process_args, desc=f"Extracting {block_size}x{block_size} blocks")
+        else:
+            iterator = process_args
+        
+        for args in iterator:
+            blocks, label, success = _process_single_image(args)
+            if success:
+                all_blocks[label].extend(blocks)
+            else:
+                failed_images += 1
+
+    if failed_images > 0:
+        print(f"Warning: Failed to process {failed_images} images")
 
     # Sample to fixed number per class if specified
     block_images = []
@@ -86,7 +145,7 @@ def extract_blocks_from_dataset(
     for label in [0, 1]:
         blocks = all_blocks[label]
         if max_samples_per_class and len(blocks) > max_samples_per_class:
-            # Randomly sample
+            # Randomly sample to target number
             sampled_blocks = random.sample(blocks, max_samples_per_class)
         else:
             sampled_blocks = blocks
