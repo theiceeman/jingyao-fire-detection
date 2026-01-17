@@ -67,7 +67,9 @@ def run_experiment_color_space(
     print(f"  evaluation test set: {len(test_directories)} images")
 
     # ========== EXPERIMENT LOOP ==========
-    color_spaces = ["HSV", "LAB", "YCbCr"]
+    color_spaces = ["HSV", 
+                    # "LAB", "YCbCr"
+                    ]
     firelike_amounts = [0, 50, 100, 150]
     results = {"EfficientNet": {}, "MobileNet": {}, "SVM": {}}
 
